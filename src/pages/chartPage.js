@@ -3,7 +3,7 @@ import Header from '../components/Header';
 import Chart from '../components/Chart';
 import OrderBook from '../components/OrderBook';
 import OrderForm from '../components/OrderForm';
-import './chartPage.css';
+import './chartPage.css';
 
 function ChartPage() {
   return (
