@@ -2,9 +2,11 @@ import './App.css';
 
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import MainPage from './pages/MainPage';
 import ChartPage from './pages/chartPage.js';
 import Icon from './components/Icon.js';
+
 function App() {
   return (
     <Router>

@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import ApexCharts from 'react-apexcharts';
 import axios from 'axios';
+
 const Chart = () => {
-  // 차트 설정과 데이터를 관리하는 상태
   const [options, setOptions] = useState({
     chart: {
-      type: 'candlestick', // 캔들 차트 타입 설정
-      height: 250, // 차트 높이 설정
+      type: 'candlestick',
+      height: 250,
     },
     title: {
-      text: 'Stock Price', // 차트 제목
+      text: 'Stock Price',
       align: 'center',
     },
     xaxis: {
-      type: 'datetime', // x축을 날짜로 설정
+      type: 'datetime',
     },
     yaxis: {
       tooltip: {
@@ -21,23 +21,37 @@ const Chart = () => {
       },
     },
   });
-  const [series, setSeries] = useState([
-    {
-      name: 'price',
-      data: [], // 초기 데이터는 빈 배열로 설정
-    },
-  ]);
+
+  const [series, setSeries] = useState([{ name: 'price', data: [] }]);
+  const [accessToken, setAccessToken] = useState('');
 
   useEffect(() => {
-    const getDailyStockPrices = async () => {
-      let results = [];
+    async function getAccessToken() {
+      try {
+        const response = await axios.post('apis/oauth2/tokenP', {
+          grant_type: 'client_credentials',
+          appkey: process.env.REACT_APP_APPKEY,
+          secretkey: process.env.REACT_APP_SECRETKEY,
+        });
+        setAccessToken(response.data.access_token);
+      } catch (err) {
+        console.log(err);
+      }
+    }
+
+    getAccessToken();
+  }, []);
+
+  useEffect(() => {
+    async function getDailyStockPrices() {
+      if (!accessToken) return;
 
       try {
-        const response = await axios.get('uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice', {
+        const response = await axios.get('apis/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice', {
           headers: {
-            authorization: `Bearer ${process.env.REACT_APP_ACCESS_TOKEN}`,
-            appkey: process.env.REACT_APP_APPKEY,
-            appsecret: process.env.REACT_APP_SECRETKEY,
+            authorization: `Bearer ${accessToken}`,
+            appkey: process.env.REACT_APP_appKey,
+            appsecret: process.env.REACT_APP_secretKey,
             tr_id: 'FHKST03010100',
             custtype: 'P',
           },
@@ -51,49 +65,27 @@ const Chart = () => {
           },
         });
 
-        response.data.output1.forEach((item) => {
-          const { date, stck_oprc, stck_hgpr, stck_lwpr, stck_clpr } = item;
-          results.push({
-            x: new Date(date),
-            y: [stck_oprc, stck_hgpr, stck_lwpr, stck_clpr],
-          });
-        });
+        const newData = response.data.output2.map((item) => ({
+          x: item.stck_bsop_date, // 수정 필요: API 응답에 맞는 실제 날짜 데이터 사용
+          y: [item.stck_bsop_date, item.stck_oprc, item.stck_hgpr, item.stck_lwpr, item.stck_clpr],
+        }));
 
-        setSeries([{ name: 'stock price', data: results }]);
+        setSeries([{ name: 'stock price', data: newData }]);
       } catch (err) {
         console.error(`Error fetching price for stock code '000120':`, err);
       }
-    };
+    }
 
-    getDailyStockPrices();
-  }, []);
+    if (accessToken) {
+      getDailyStockPrices();
+    }
+  }, [accessToken]); // accessToken 상태에 의존
 
   return (
     <div id="chart">
-      <ApexCharts
-        options={{
-          chart: {
-            type: 'candlestick',
-            height: 350,
-          },
-          title: {
-            text: 'Stock Price',
-            align: 'center',
-          },
-          xaxis: {
-            type: 'datetime',
-          },
-          yaxis: {
-            tooltip: {
-              enabled: true,
-            },
-          },
-        }}
-        series={series}
-        type="candlestick"
-        height={550}
-      />
+      <ApexCharts options={options} series={series} type="candlestick" height={550} />
     </div>
   );
 };
+
 export default Chart;
